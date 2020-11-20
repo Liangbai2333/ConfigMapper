@@ -31,6 +31,10 @@ public class ConfigMapper {
 
         if (plugin == null) return null;
 
+        File file = new File(fileName);
+
+        if (file.exists()) return mapToBean(plugin, type, YamlConfiguration.loadConfiguration(file));
+
         FileConfiguration configuration = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), fileName));
 
         return mapToBean(plugin, type, configuration);
