@@ -6,6 +6,7 @@ import site.liangbai.configmapper.adapter.AbstractAdapter;
 import site.liangbai.configmapper.adapter.impl.CommonAdapter;
 import site.liangbai.configmapper.adapter.impl.InnerClassAdapter;
 import site.liangbai.configmapper.adapter.impl.MapAdapter;
+import site.liangbai.configmapper.annotation.ConfigOption;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -22,15 +23,32 @@ public final class AdapterHelper {
             modifierField.setAccessible(true);
             modifierField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
 
-            AbstractAdapter adapter = getAdapter(field, section);
+            String name = field.getName();
+            ConfigurationSection configurationSection = section;
 
-            adapter.applyAdapter(plugin, field.getName(), object, field, section);
+            ConfigOption configOption = field.getAnnotation(ConfigOption.class);
+
+            if (configOption != null) {
+                name = configOption.value();
+
+                configurationSection = getConfigurationSection(configOption.section(), section);
+            }
+
+            AbstractAdapter adapter = getAdapter(field, configurationSection);
+
+            adapter.applyAdapter(plugin, name, object, field, configurationSection);
 
         } catch (NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();
         } finally {
             field.setAccessible(old);
         }
+    }
+
+    protected static ConfigurationSection getConfigurationSection(String s, ConfigurationSection section) {
+        if (s == null || s.equals("")) return section;
+
+        return section.contains(s) ? (section.isConfigurationSection(s) ? section.getConfigurationSection(s) : section) : section;
     }
 
     protected static AbstractAdapter getAdapter(Field field, ConfigurationSection section) {
