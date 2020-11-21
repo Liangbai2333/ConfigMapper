@@ -5,6 +5,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
+import site.liangbai.configmapper.adapter.impl.MapAdapter;
 import site.liangbai.configmapper.adapter.util.AdapterHelper;
 import site.liangbai.configmapper.reflect.ReflectSecurityManager;
 
@@ -12,6 +13,7 @@ import java.io.File;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Map;
 import java.util.logging.Level;
 
 /**
@@ -20,7 +22,7 @@ import java.util.logging.Level;
  * You can use {@link ConfigMapper#mapToBean(Class, ConfigurationSection)} to map your configuration section.
  * @author Liangbai
  */
-public class ConfigMapper {
+public final class ConfigMapper {
     private static final ReflectSecurityManager reflectSecurityManager = new ReflectSecurityManager();
 
     public static <T> T mapToBean(Class<T> type, String fileName) {
@@ -55,7 +57,12 @@ public class ConfigMapper {
         return mapToBean(plugin, type, section);
     }
 
+    @SuppressWarnings("unchecked")
     public static <T> T mapToBean(Plugin plugin, Class<T> type, ConfigurationSection section) {
+        if (Map.class.isAssignableFrom(type)) {
+            return (T) MapAdapter.configurationMapToMap(section);
+        }
+
         Constructor<T> constructor = null;
         boolean old = false;
 
@@ -68,12 +75,10 @@ public class ConfigMapper {
 
             T object = constructor.newInstance();
 
-            ClassLoader loader = plugin.getClass().getClassLoader();
-
             for (Field declaredField : object.getClass().getDeclaredFields()) {
                 if (!section.contains(declaredField.getName())) continue;
 
-                AdapterHelper.autoMapToField(loader, object, declaredField, section);
+                AdapterHelper.autoMapToField(plugin, object, declaredField, section);
             }
 
             return object;
